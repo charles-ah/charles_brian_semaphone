@@ -12,13 +12,13 @@
 int main(int argc, char* argv[])
 {
   //printf("%s\n",argv[1]);
-  int key;
+  key_t key;
   int shmDES;
   int semDES;
   int fd;
   if(strcmp(argv[1],"-c")==0)
     {
-      key = 123456;
+      key = ftok("/usr", 23);
       shmDES = shmget(key,1,IPC_CREAT | 0666);// | S_IRUSR | S_IWUSR);
       semDES = semget(key,1,IPC_CREAT | 0644);
       fd = open("text",O_TRUNC | O_CREAT,S_IRUSR | S_IWUSR | S_IROTH | S_IWOTH);
@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
       //union semun arg;
       //struct shmid_ds *s1;
       //printf("shmDES: %d\n",shmDES);
-      key = 123456;
+      key = ftok("/usr", 23);;
       shmDES = shmget(key,1,IPC_EXCL | S_IRUSR | S_IWUSR);
       semDES = semget(key,1,IPC_EXCL | 0644);
       printf("shmDES: %d\n",shmDES);
