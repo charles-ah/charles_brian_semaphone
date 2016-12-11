@@ -2,6 +2,5 @@ compile:
 	gcc control.c -o control
 	gcc client.c -o client
 clean:
-	rm control
-	rm *.out
-	rm story.txt
+	rm -f control client
+	rm -f story.txt

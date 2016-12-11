@@ -10,75 +10,67 @@
 #include <string.h>
 #include <errno.h>
 
-void shared_memory_operations(key_t key, char* buf, char* buf2) {
-  int sd;
-  sd = shmget(key, 1, 0);
-  if (errno) {
-    printf("Shmget error %s\n", strerror(errno));
-  }
+void shared_memory_operations(key_t key, char* write_buffer) {
+  // Memory operations
+  int sd = shmget(key, sizeof(int), 0); // get shared memory
+  int* seg = shmat(sd, 0, 0); // attach memory to a variable
 
-  int * seg = shmat(sd, 0, 0);
-  if (errno) {
-    printf("Shmat error %s\n", strerror(errno));
-  }
+  // File operations
+  int fd = open("story.txt", O_RDWR, 0644); // open file
+  off_t offset = lseek(fd, -(*seg), SEEK_END); // set offset
 
-  int fd = open("story.txt", O_RDWR, 0664);
-  if (errno) {
-    printf("Open error %s\n", strerror(errno));
-  }
-  printf("FD: %d\n", fd);
-
-    off_t offset = lseek(fd, -(*seg), SEEK_END);
-  if (errno) {
-    printf("lseek error %s\n", strerror(errno));
-  }
-  printf("OFFSET FROM BEGINNING: %lu\n", offset);
-
-  int status = read(fd, buf, 1024);
-  if (errno) {
-    printf("Read error %s\n", strerror(errno));
-  }
-  printf("READ STATUS: %d\n", status);
-  if (status) {
+  // Get last line
+  char* buf = (char*) malloc(*seg + 1);
+  int bytes_read = read(fd, buf, *seg);
+  *(buf + *seg) = '\0';
+  if (bytes_read > 0) {
     printf("Last line: %s\n", buf);
+  } else {
+    printf("No recently added lines found. Create a new story.\n");
   }
+  free(buf);
 
+  // Get input
   printf("Your update: ");
-  fgets(buf2, 1024, stdin);
-  write(fd,buf2,strlen(buf2));
+  fgets(write_buffer, 1024, stdin);
 
+  // Store data in file and shared memory
+  int status = write(fd, write_buffer, strlen(write_buffer));
+  *seg = strlen(write_buffer);
+
+  // Detach memory segment and close file
   shmdt(seg);
   close(fd);
 }
 
 int main() {
-  umask(113);
+  umask(0133);
 
-  key_t key = ftok("/usr", 23);
+  // Get keys
+  key_t sem_key = ftok("/usr", 23);
   if (errno) {
-    printf("Ftok error: %s\n", strerror(errno));
+    printf("Ftok error #%d: %s\n", errno, strerror(errno));
+  }
+  key_t shm_key = ftok("makefile", 60);
+  if (errno) {
+    printf("Ftok error #%d: %s\n", errno, strerror(errno));
   }
 
-  int semd;
-  semd = semget(key, 1, IPC_EXCL | 0644 );
-  if (errno) {
-    printf("Semget error: %s\n", strerror(errno));
-  }
+  // Get semaphore
+  int semid;
+  semid = semget(sem_key, 1, 0);
 
   // wait for semaphore to be released
-  char buf[1024];
-  char buf2[1024];
-  shared_memory_operations(key, buf, buf2);
+  struct sembuf sbuf = {0, -1, SEM_UNDO};
+  semop(semid, &sbuf, 1);
 
-  struct sembuf sbuf;
-  sbuf.sem_num = 0; // number of semaphores to access
+  // Add to story
+  char write_buffer[1024];
+  shared_memory_operations(shm_key, write_buffer);
+
+  // Release semaphore
   sbuf.sem_op = 1; // up: releases the semaphore
-  sbuf.sem_flg = SEM_UNDO; // rollback in case program fails
-
-  semop(semd, &sbuf, 1);
-  if (errno) {
-    printf("Semop error: %s\n", strerror(errno));
-  }
+  semop(semid, &sbuf, 1);
 
   return 0;
 }
