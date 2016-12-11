@@ -48,12 +48,10 @@ int main(int argc, char* argv[])
     printf("removing shared memory, should be 0: %d\n",shmctl(shmDES,IPC_RMID,0));
     printf("removing semaphore, should be 0: %d\n",semctl(semDES,0,IPC_RMID,0));
 
-    printf("printing out contents of story ....\n");
     char* args[3] = {"cat","story.txt", NULL};
     execvp(args[0],args);
   }
   if(strcmp(argv[1],"-v")==0) {
-    printf("printing out contents of story ....\n");
     char* args[] = {"cat", "story.txt", NULL};
     execvp(args[0],args);
   }

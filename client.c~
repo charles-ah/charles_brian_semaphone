@@ -28,7 +28,7 @@ void shared_memory_operations(key_t key, char* buf, char* buf2) {
   }
   printf("FD: %d\n", fd);
 
-    off_t offset = lseek(fd, -(*seg), SEEK_END);
+  off_t offset = lseek(fd, -(*seg), SEEK_END);
   if (errno) {
     printf("lseek error %s\n", strerror(errno));
   }
@@ -46,7 +46,6 @@ void shared_memory_operations(key_t key, char* buf, char* buf2) {
   printf("Your update: ");
   fgets(buf2, 1024, stdin);
   write(fd,buf2,strlen(buf2));
-
   shmdt(seg);
   close(fd);
 }
